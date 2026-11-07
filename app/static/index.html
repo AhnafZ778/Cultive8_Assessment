@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cultive8 — Local AI Security Log Analyzer (2,048-Token Bounded Ledger)</title>
+  <style>
+    :root {
+      --bg-canvas: #F5F4EF;
+      --bg-card: #FFFFFF;
+      --bg-subtle: #FAF9F5;
+      --border-crisp: #D6D3C9;
+      --border-strong: #A8A29E;
+      --ink-primary: #141413;
+      --ink-secondary: #4A4944;
+      --ink-muted: #68665E;
+
+      --cta-green: #14532D;
+      --cta-green-hover: #0F3F22;
+      --cta-secondary-bg: #EEF2FF;
+      --cta-secondary-border: #3730A3;
+      --cta-secondary-ink: #1E1B4B;
+      --focus-ring: #1D4ED8;
+
+      --crit-bg: #FEF2F2;
+      --crit-border: #B91C1C;
+      --crit-badge: #B91C1C;
+
+      --high-bg: #FFF7ED;
+      --high-border: #C2410C;
+      --high-badge: #C2410C;
+
+      --med-bg: #FEFCE8;
+      --med-border: #A16207;
+      --med-badge: #A16207;
+
+      --low-bg: #F8FAFC;
+      --low-border: #334155;
+      --low-badge: #334155;
+
+      --ok-bg: #ECFDF5;
+      --ok-border: #047857;
+      --ok-ink: #065F46;
+
+      --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-canvas);
+      color: var(--ink-primary);
+      font-family: var(--font-sans);
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Constraint-authored top operational ledger strip */
+    .top-ledger-strip {
+      background-color: #EAE8DF;
+      border-bottom: 1px solid var(--border-crisp);
+      padding: 8px 16px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink-primary);
+    }
+
+    .top-ledger-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 16px;
+    }
+
+    .ledger-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 14px;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background-color: #047857;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+
+    .status-dot.offline {
+      background-color: #B91C1C;
+    }
+
+    .ledger-pill {
+      background: var(--bg-card);
+      border: 1px solid var(--border-crisp);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-weight: 600;
+    }
+
+    .page-shell {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 20px 16px 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .page-header {
+      border-bottom: 2px solid var(--ink-primary);
+      padding-bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px 16px;
+    }
+
+    .page-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.01em;
+    }
+
+    .page-subtitle {
+      font-size: 15px;
+      color: var(--ink-secondary);
+      margin: 4px 0 0;
+      max-width: 72ch;
+    }
+
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-crisp);
+      border-radius: 6px;
+      padding: 20px;
+    }
+
+    .section-header {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    /* Alert Banner */
+    .error-banner {
+      background-color: var(--crit-bg);
+      border: 2px solid var(--crit-border);
+      border-radius: 6px;
+      padding: 14px 16px;
+      color: var(--ink-primary);
+      display: none;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .error-banner.visible {
+      display: flex;
+    }
+
+    .error-banner-title {
+      font-weight: 700;
+      color: var(--crit-border);
+      margin-bottom: 2px;
+      font-size: 15px;
+    }
+
+    .error-banner-msg {
+      font-size: 14.5px;
+      margin: 0;
+    }
+
+    .error-close-btn {
+      background: transparent;
+      border: 1px solid var(--crit-border);
+      color: var(--crit-border);
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    /* 1. Decision Box */
+    .decision-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 740px) {
+      .decision-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .dropzone-box {
+      border: 2px dashed var(--border-strong);
+      border-radius: 6px;
+      background-color: var(--bg-subtle);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      transition: background-color 0.12s ease, border-color 0.12s ease;
+    }
+
+    .dropzone-box.drag-over {
+      border-color: var(--cta-green);
+      background-color: #ECFDF5;
+    }
+
+    .sample-box {
+      border: 1px solid var(--border-crisp);
+      border-radius: 6px;
+      background-color: var(--bg-subtle);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .box-label {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0 0 4px;
+    }
+
+    .box-help {
+      font-size: 14px;
+      color: var(--ink-secondary);
+      margin: 0;
+    }
+
+    .btn-primary,
+    .btn-demo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      min-height: 48px;
+      padding: 12px 18px;
+      font-family: var(--font-sans);
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      transition: background-color 0.12s ease;
+    }
+
+    .btn-primary {
+      background-color: var(--cta-green);
+      color: #FFFFFF;
+      border: 2px solid var(--cta-green);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--cta-green-hover);
+      border-color: var(--cta-green-hover);
+    }
+
+    .btn-demo {
+      background-color: #1E293B;
+      color: #FFFFFF;
+      border: 2px solid #1E293B;
+    }
+
+    .btn-demo:hover:not(:disabled) {
+      background-color: #0F172A;
+      border-color: #0F172A;
+    }
+
+    .btn-primary:focus-visible,
+    .btn-demo:focus-visible,
+    select:focus-visible,
+    .line-pill:focus-visible,
+    summary:focus-visible {
+      outline: 3px solid var(--focus-ring);
+      outline-offset: 2px;
+    }
+
+    .btn-primary:disabled,
+    .btn-demo:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .controls-footer {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-crisp);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px 16px;
+      font-size: 14px;
+      color: var(--ink-secondary);
+    }
+
+    .model-select-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .model-select {
+      font-family: var(--font-mono);
+      font-size: 13.5px;
+      padding: 6px 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
+      background-color: #FFFFFF;
+      color: var(--ink-primary);
+      font-weight: 600;
+    }
+
+    /* 2. Live Progress & Token Telemetry Box */
+    .telemetry-card {
+      display: none;
+    }
+
+    .telemetry-card.visible {
+      display: block;
+    }
+
+    .telemetry-hero {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .metric-tile {
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-crisp);
+      border-radius: 6px;
+      padding: 12px 14px;
+    }
+
+    .metric-label {
+      font-size: 12.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--ink-secondary);
+      margin-bottom: 4px;
+    }
+
+    .metric-value {
+      font-family: var(--font-mono);
+      font-size: 20px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink-primary);
+    }
+
+    .metric-sub {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      color: var(--ink-secondary);
+      margin-top: 2px;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 12px;
+      background-color: #E5E4DC;
+      border: 1px solid var(--border-crisp);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background-color: var(--cta-green);
+      transition: width 0.2s ease;
+    }
+
+    /* Tables */
+    .table-scroll {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border-crisp);
+      border-radius: 6px;
+    }
+
+    table.ledger-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      text-align: left;
+    }
+
+    table.ledger-table th,
+    table.ledger-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-crisp);
+      white-space: nowrap;
+    }
+
+    table.ledger-table th {
+      background-color: #EFECE4;
+      color: var(--ink-primary);
+      font-weight: 700;
+    }
+
+    table.ledger-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .badge-ok {
+      display: inline-block;
+      background-color: var(--ok-bg);
+      color: var(--ok-ink);
+      border: 1px solid var(--ok-border);
+      padding: 1px 7px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    /* 3. Executive Summary & Unified Cross-Chunk Threat Cards */
+    .report-section {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .report-section.visible {
+      display: flex;
+    }
+
+    .summary-banner {
+      background-color: #FFFFFF;
+      border: 2px solid var(--ink-primary);
+      border-radius: 6px;
+      padding: 16px 20px;
+    }
+
+    .summary-banner-text {
+      font-size: 15.5px;
+      font-weight: 600;
+      margin: 0 0 12px;
+      max-width: 72ch;
+    }
+
+    .summary-kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+    }
+
+    .kpi-box {
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-crisp);
+      border-radius: 5px;
+      padding: 10px 12px;
+    }
+
+    .kpi-num {
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink-secondary);
+    }
+
+    .findings-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .finding-card {
+      border-radius: 6px;
+      padding: 18px 20px;
+      background-color: #FFFFFF;
+    }
+
+    .finding-card.sev-Critical {
+      background-color: var(--crit-bg);
+      border: 2px solid var(--crit-border);
+    }
+
+    .finding-card.sev-High {
+      background-color: var(--high-bg);
+      border: 2px solid var(--high-border);
+    }
+
+    .finding-card.sev-Medium {
+      background-color: var(--med-bg);
+      border: 1.5px solid var(--med-border);
+    }
+
+    .finding-card.sev-Low {
+      background-color: var(--low-bg);
+      border: 1.5px solid var(--low-border);
+    }
+
+    .finding-top-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 12px;
+      margin-bottom: 10px;
+    }
+
+    .finding-badges {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sev-badge {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 4px;
+      color: #FFFFFF;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .sev-badge.Critical { background-color: var(--crit-badge); }
+    .sev-badge.High { background-color: var(--high-badge); }
+    .sev-badge.Medium { background-color: var(--med-badge); }
+    .sev-badge.Low { background-color: var(--low-badge); }
+
+    .finding-id-pill {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      background-color: #FFFFFF;
+      border: 1px solid var(--border-strong);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .cross-chunk-badge {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      font-weight: 700;
+      background-color: #1E1B4B;
+      color: #FFFFFF;
+      padding: 3px 9px;
+      border-radius: 4px;
+    }
+
+    .finding-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0 0 6px;
+      color: var(--ink-primary);
+    }
+
+    .actor-meta {
+      font-family: var(--font-mono);
+      font-size: 13.5px;
+      color: var(--ink-primary);
+      background-color: rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--border-crisp);
+      border-radius: 4px;
+      padding: 6px 10px;
+      margin-bottom: 12px;
+      display: inline-block;
+    }
+
+    .finding-prose-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 740px) {
+      .finding-prose-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .prose-box {
+      background-color: #FFFFFF;
+      border: 1px solid var(--border-crisp);
+      border-radius: 5px;
+      padding: 12px 14px;
+    }
+
+    .prose-box-label {
+      font-size: 12.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--ink-secondary);
+      margin: 0 0 4px;
+    }
+
+    .prose-box-body {
+      font-size: 15px;
+      margin: 0;
+      max-width: 72ch;
+      color: var(--ink-primary);
+    }
+
+    .cross-chain-note {
+      background-color: #FFFFFF;
+      border-left: 4px solid #1E1B4B;
+      border-top: 1px solid var(--border-crisp);
+      border-right: 1px solid var(--border-crisp);
+      border-bottom: 1px solid var(--border-crisp);
+      padding: 8px 12px;
+      font-size: 14px;
+      margin-bottom: 12px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .evidence-lines-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .evidence-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ink-secondary);
+      margin-right: 4px;
+    }
+
+    .line-pill {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      font-weight: 700;
+      background-color: #FFFFFF;
+      color: var(--ink-primary);
+      border: 1px solid var(--ink-primary);
+      border-radius: 4px;
+      padding: 2px 7px;
+      cursor: pointer;
+    }
+
+    .line-pill:hover,
+    .line-pill.active {
+      background-color: var(--ink-primary);
+      color: #FFFFFF;
+    }
+
+    .excerpts-container {
+      background-color: #FFFFFF;
+      border: 1px solid var(--border-crisp);
+      border-radius: 5px;
+      max-height: 240px;
+      overflow-y: auto;
+      padding: 8px 10px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .excerpt-row {
+      padding: 4px 6px;
+      border-bottom: 1px solid #EFECE4;
+      word-break: break-all;
+      border-radius: 3px;
+    }
+
+    .excerpt-row:last-child {
+      border-bottom: none;
+    }
+
+    .excerpt-row.highlighted {
+      background-color: #FEF08A;
+      font-weight: 700;
+    }
+
+    /* Drawers / Collapsibles */
+    details.ledger-drawer {
+      background-color: #FFFFFF;
+      border: 1px solid var(--border-crisp);
+      border-radius: 6px;
+      padding: 14px 18px;
+    }
+
+    details.ledger-drawer summary {
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      list-style: none;
+    }
+
+    details.ledger-drawer summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .drawer-body {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-crisp);
+    }
+
+    .noise-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .noise-item {
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border-crisp);
+      border-radius: 5px;
+      padding: 10px 14px;
+    }
+
+    .noise-item-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-weight: 700;
+      font-size: 14.5px;
+      margin-bottom: 4px;
+    }
+
+    .noise-lines {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      color: var(--ink-secondary);
+    }
+
+    .noise-desc {
+      font-size: 14px;
+      color: var(--ink-secondary);
+      margin: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Constraint-Authored Top Operational Ledger Strip -->
+  <header class="top-ledger-strip" aria-label="Operational Hardware and Context Budget Constraints">
+    <div class="top-ledger-inner">
+      <div>
+        <span id="ollama-dot" class="status-dot" aria-hidden="true"></span>
+        <strong id="ollama-status-text">Local Ollama: Checking...</strong>
+      </div>
+      <div class="ledger-metrics">
+        <span class="ledger-pill" id="strip-model">Model: qwen3.5:0.8b</span>
+        <span class="ledger-pill" id="strip-cap">Context Cap: 2,048 tok/call</span>
+        <span class="ledger-pill" id="strip-ram">Backend RAM: -- MB / 4,096 MB</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Cultive8 Security Log Analyzer</h1>
+        <p class="page-subtitle">
+          Sequential local LLM log investigation under a strict <strong>2,048-token per-call budget</strong> with cross-chunk actor correlation and prompt-injection quarantine.
+        </p>
+      </div>
+    </div>
+
+    <!-- Inline High-Contrast Error Banner (does not clear prior results) -->
+    <div id="error-banner" class="error-banner" role="alert" aria-live="assertive">
+      <div>
+        <div class="error-banner-title">Upload / Analysis Rejected</div>
+        <p id="error-banner-msg" class="error-banner-msg"></p>
+      </div>
+      <button type="button" id="error-close-btn" class="error-close-btn" aria-label="Dismiss error">Dismiss</button>
+    </div>
+
+    <!-- 1. Choose Log File & Run Local AI Analysis -->
+    <section class="card" aria-labelledby="step1-heading">
+      <h2 id="step1-heading" class="section-header">
+        <span>1. Choose Log File &amp; Run Local AI Analysis</span>
+      </h2>
+
+      <div class="decision-grid">
+        <!-- Primary CTA: Upload or Drag & Drop .log / .txt -->
+        <div id="dropzone" class="dropzone-box">
+          <div>
+            <p class="box-label">Option A — Upload Your Server Log (.log / .txt)</p>
+            <p class="box-help">
+              Drag and drop any UTF-8 <code>.log</code> or <code>.txt</code> file here (up to 10 MB), or click below to pick a file and start immediate analysis.
+            </p>
+          </div>
+          <div>
+            <input type="file" id="file-input" accept=".log,.txt,text/plain" style="display:none" />
+            <button type="button" id="upload-cta-btn" class="btn-primary">
+              Upload .log / .txt &amp; Analyze
+            </button>
+          </div>
+        </div>
+
+        <!-- Instant Demo CTA: 1-Click Supplied Cultive8 Server Log -->
+        <div class="sample-box">
+          <div>
+            <p class="box-label">Option B — Instant 1-Click Demo Log</p>
+            <p class="box-help">
+              Analyze the supplied <code>Cultive8_Workspace_Agrigen_Server.log</code> (258 lines across 11 chunks) with zero file hunting.
+            </p>
+          </div>
+          <div>
+            <button type="button" id="sample-cta-btn" class="btn-demo">
+              Analyze Supplied Cultive8 Server Log
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls-footer">
+        <div class="model-select-group">
+          <label for="model-select"><strong>Local Ollama Model:</strong></label>
+          <select id="model-select" class="model-select">
+            <option value="qwen3.5:0.8b">qwen3.5:0.8b (Default · Fast Local)</option>
+          </select>
+        </div>
+        <div id="selected-file-indicator">
+          Ready — Choose a file or click <strong>Analyze Supplied Cultive8 Server Log</strong>.
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Live Sequential Chunk & Token Telemetry -->
+    <section id="telemetry-section" class="card telemetry-card" aria-labelledby="step2-heading" aria-live="polite">
+      <h2 id="step2-heading" class="section-header">
+        <span id="telemetry-title">2. Sequential Chunk &amp; Token Budget Telemetry</span>
+        <span id="telemetry-status-pill" class="ledger-pill">Queued</span>
+      </h2>
+
+      <div class="telemetry-hero">
+        <div class="metric-tile">
+          <div class="metric-label">Current Chunk Progress</div>
+          <div id="metric-part" class="metric-value">Part 0 of 0</div>
+          <div id="metric-lines" class="metric-sub">Lines: --</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-label">Last Call Token Meter</div>
+          <div id="metric-last-tokens" class="metric-value">0 / 2,048 tok</div>
+          <div id="metric-max-tokens" class="metric-sub">Max call observed: 0 / 2,048</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-label">Confirmed Findings Saved</div>
+          <div id="metric-findings-so-far" class="metric-value">0 Threats</div>
+          <div id="metric-cross-so-far" class="metric-sub">0 cross-chunk chains linked</div>
+        </div>
+        <div class="metric-tile">
+          <div class="metric-label">Elapsed &amp; Memory</div>
+          <div id="metric-elapsed" class="metric-value">0.0s</div>
+          <div id="metric-rss" class="metric-sub">Backend RSS: -- MB</div>
+        </div>
+      </div>
+
+      <div class="progress-track" role="progressbar" id="progress-bar-aria" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div id="progress-fill" class="progress-fill"></div>
+      </div>
+
+      <details id="chunk-audit-drawer" class="ledger-drawer" open>
+        <summary>
+          <span>Per-Chunk Token Budget Audit Ledger (<span id="audit-count-label">0 calls</span> · Hard Cap: 2,048 Tokens/Call)</span>
+          <span style="font-size:13px; color:var(--ink-secondary);">Toggle Table ▾</span>
+        </summary>
+        <div class="drawer-body">
+          <div class="table-scroll">
+            <table class="ledger-table">
+              <thead>
+                <tr>
+                  <th>Part #</th>
+                  <th>Log Lines</th>
+                  <th>Carry State</th>
+                  <th>Prompt Tok</th>
+                  <th>Output Tok</th>
+                  <th>Total / 2,048 Cap</th>
+                  <th>Time</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="chunk-table-body">
+                <tr>
+                  <td colspan="8" style="text-align:center; color:var(--ink-secondary);">Waiting for first chunk to finish...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- 3. Unified Incident Report & Cross-Chunk Threat Cards -->
+    <section id="report-section" class="report-section" aria-labelledby="step3-heading">
+      <div class="summary-banner">
+        <h2 id="step3-heading" class="section-header" style="margin-bottom:8px;">
+          <span>3. Unified Security Incident Report</span>
+          <span id="report-badge-state" class="badge-ok">Verified &le; 2,048 Tokens / Call</span>
+        </h2>
+        <p id="report-summary-text" class="summary-banner-text"></p>
+
+        <div class="summary-kpi-row">
+          <div class="kpi-box">
+            <div id="kpi-total-findings" class="kpi-num">0</div>
+            <div class="kpi-title">Confirmed Security Threats</div>
+          </div>
+          <div class="kpi-box">
+            <div id="kpi-cross-chains" class="kpi-num">0</div>
+            <div class="kpi-title">Cross-Part Linked Attack Chains</div>
+          </div>
+          <div class="kpi-box">
+            <div id="kpi-max-tokens" class="kpi-num">0 / 2,048</div>
+            <div class="kpi-title">Peak Token Call Used</div>
+          </div>
+          <div class="kpi-box">
+            <div id="kpi-ignored-noise" class="kpi-num">0</div>
+            <div class="kpi-title">Operational Noise Categories Excluded</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Threat Cards Stack -->
+      <div id="findings-stack" class="findings-stack"></div>
+
+      <!-- Ignored Operational Noise & Benign Events Drawer -->
+      <details id="noise-drawer" class="ledger-drawer" open>
+        <summary>
+          <span>Ignored Operational Noise &amp; Benign Events Ledger (<span id="noise-count-label">0 categories</span> excluded from threats)</span>
+          <span style="font-size:13px; color:var(--ink-secondary);">Toggle Drawer ▾</span>
+        </summary>
+        <div class="drawer-body">
+          <p style="margin:0 0 10px; font-size:14px; color:var(--ink-secondary);">
+            The analyzer separates non-security infrastructure errors (database timeouts, upstream 502s, null-pointer 500s, release 503s, health probes) and single-attempt user password typos from actual adversarial attacks:
+          </p>
+          <div id="noise-list" class="noise-grid"></div>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const ollamaDot = document.getElementById("ollama-dot");
+      const ollamaStatusText = document.getElementById("ollama-status-text");
+      const stripModel = document.getElementById("strip-model");
+      const stripCap = document.getElementById("strip-cap");
+      const stripRam = document.getElementById("strip-ram");
+
+      const errorBanner = document.getElementById("error-banner");
+      const errorBannerMsg = document.getElementById("error-banner-msg");
+      const errorCloseBtn = document.getElementById("error-close-btn");
+
+      const dropzone = document.getElementById("dropzone");
+      const fileInput = document.getElementById("file-input");
+      const uploadCtaBtn = document.getElementById("upload-cta-btn");
+      const sampleCtaBtn = document.getElementById("sample-cta-btn");
+      const modelSelect = document.getElementById("model-select");
+      const selectedFileIndicator = document.getElementById("selected-file-indicator");
+
+      const telemetrySection = document.getElementById("telemetry-section");
+      const telemetryStatusPill = document.getElementById("telemetry-status-pill");
+      const metricPart = document.getElementById("metric-part");
+      const metricLines = document.getElementById("metric-lines");
+      const metricLastTokens = document.getElementById("metric-last-tokens");
+      const metricMaxTokens = document.getElementById("metric-max-tokens");
+      const metricFindingsSoFar = document.getElementById("metric-findings-so-far");
+      const metricCrossSoFar = document.getElementById("metric-cross-so-far");
+      const metricElapsed = document.getElementById("metric-elapsed");
+      const metricRss = document.getElementById("metric-rss");
+      const progressBarAria = document.getElementById("progress-bar-aria");
+      const progressFill = document.getElementById("progress-fill");
+      const auditCountLabel = document.getElementById("audit-count-label");
+      const chunkTableBody = document.getElementById("chunk-table-body");
+
+      const reportSection = document.getElementById("report-section");
+      const reportBadgeState = document.getElementById("report-badge-state");
+      const reportSummaryText = document.getElementById("report-summary-text");
+      const kpiTotalFindings = document.getElementById("kpi-total-findings");
+      const kpiCrossChains = document.getElementById("kpi-cross-chains");
+      const kpiMaxTokens = document.getElementById("kpi-max-tokens");
+      const kpiIgnoredNoise = document.getElementById("kpi-ignored-noise");
+      const findingsStack = document.getElementById("findings-stack");
+      const noiseCountLabel = document.getElementById("noise-count-label");
+      const noiseList = document.getElementById("noise-list");
+
+      let pollTimer = null;
+      let activeJobId = null;
+
+      function escapeHtml(str) {
+        return String(str == null ? "" : str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function showError(msg) {
+        errorBannerMsg.textContent = msg;
+        errorBanner.classList.add("visible");
+      }
+
+      function clearError() {
+        errorBanner.classList.remove("visible");
+        errorBannerMsg.textContent = "";
+      }
+
+      errorCloseBtn.addEventListener("click", clearError);
+
+      function setButtonsBusy(isBusy) {
+        uploadCtaBtn.disabled = isBusy;
+        sampleCtaBtn.disabled = isBusy;
+        modelSelect.disabled = isBusy;
+        uploadCtaBtn.setAttribute("aria-busy", isBusy ? "true" : "false");
+        sampleCtaBtn.setAttribute("aria-busy", isBusy ? "true" : "false");
+      }
+
+      async function loadSystemStatus() {
+        try {
+          const resp = await fetch("/api/system");
+          if (!resp.ok) return;
+          const data = await resp.json();
+
+          if (data.ollama_online) {
+            ollamaDot.classList.remove("offline");
+            ollamaStatusText.textContent = "Local Ollama: Online (127.0.0.1:11434)";
+          } else {
+            ollamaDot.classList.add("offline");
+            ollamaStatusText.textContent = "Local Ollama: Offline";
+          }
+
+          stripCap.textContent = "Context Cap: " + Number(data.token_limit_per_call || 2048).toLocaleString() + " tok/call";
+          stripRam.textContent = "Backend RAM: " + Number(data.backend_rss_mb || 0).toFixed(1) + " MB / " + Number(data.ram_limit_mb || 4096).toLocaleString() + " MB";
+
+          if (Array.isArray(data.available_models) && data.available_models.length > 0) {
+            const currentVal = modelSelect.value;
+            modelSelect.innerHTML = "";
+            data.available_models.forEach(function (m) {
+              const opt = document.createElement("option");
+              opt.value = m;
+              opt.textContent = m === data.default_model ? m + " (Default · Local)" : m + " (Local)";
+              modelSelect.appendChild(opt);
+            });
+            if (data.available_models.includes(currentVal)) {
+              modelSelect.value = currentVal;
+            } else {
+              modelSelect.value = data.default_model || data.available_models[0];
+            }
+            stripModel.textContent = "Model: " + modelSelect.value;
+          }
+        } catch (err) {
+          ollamaDot.classList.add("offline");
+          ollamaStatusText.textContent = "Local Ollama: Unreachable";
+        }
+      }
+
+      modelSelect.addEventListener("change", function () {
+        stripModel.textContent = "Model: " + modelSelect.value;
+      });
+
+      // Client-side pre-check for file extension before uploading
+      function validateClientFile(file) {
+        if (!file) return "No file selected.";
+        const name = file.name || "";
+        const lower = name.toLowerCase();
+        if (!lower.endsWith(".log") && !lower.endsWith(".txt")) {
+          return "Unsupported file '" + name + "'. Only .log and .txt text files are accepted.";
+        }
+        if (file.size === 0) {
+          return "File '" + name + "' is empty (0 bytes).";
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          return "File '" + name + "' exceeds the 10 MB limit.";
+        }
+        return null;
+      }
+
+      async function startAnalysisRequest(formData, labelText) {
+        clearError();
+        setButtonsBusy(true);
+        selectedFileIndicator.innerHTML = "Starting analysis on <strong>" + escapeHtml(labelText) + "</strong>...";
+
+        try {
+          const resp = await fetch("/api/analyze", {
+            method: "POST",
+            body: formData
+          });
+          const payload = await resp.json().catch(function () { return {}; });
+          if (!resp.ok) {
+            const errMsg = payload.detail || payload.error || ("HTTP " + resp.status + " error starting analysis.");
+            showError(errMsg);
+            setButtonsBusy(false);
+            selectedFileIndicator.textContent = "Ready — Select a valid .log or .txt file.";
+            return;
+          }
+
+          activeJobId = payload.job_id;
+          telemetrySection.classList.add("visible");
+          telemetryStatusPill.textContent = "Running (" + payload.model + ")";
+          metricPart.textContent = "Part 0 of " + payload.total_chunks;
+          metricLines.textContent = "Total lines: " + payload.total_lines + " (1.." + payload.total_lines + ")";
+          selectedFileIndicator.innerHTML =
+            "Analyzing <code>" + escapeHtml(payload.filename) + "</code> (" +
+            Number(payload.total_lines).toLocaleString() + " lines split into " +
+            payload.total_chunks + " sequential chunks)...";
+
+          if (pollTimer) clearInterval(pollTimer);
+          await pollJobStatus(activeJobId);
+          pollTimer = setInterval(function () {
+            pollJobStatus(activeJobId);
+          }, 1000);
+        } catch (err) {
+          showError("Network error while submitting log file: " + (err.message || String(err)));
+          setButtonsBusy(false);
+        }
+      }
+
+      // Option A: Upload button & drag-and-drop
+      uploadCtaBtn.addEventListener("click", function () {
+        fileInput.value = "";
+        fileInput.click();
+      });
+
+      fileInput.addEventListener("change", function () {
+        if (!fileInput.files || fileInput.files.length === 0) return;
+        const file = fileInput.files[0];
+        const validationError = validateClientFile(file);
+        if (validationError) {
+          showError(validationError);
+          return;
+        }
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("model", modelSelect.value);
+        startAnalysisRequest(fd, file.name);
+      });
+
+      ["dragenter", "dragover"].forEach(function (evName) {
+        dropzone.addEventListener(evName, function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzone.classList.add("drag-over");
+        });
+      });
+
+      ["dragleave", "drop"].forEach(function (evName) {
+        dropzone.addEventListener(evName, function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzone.classList.remove("drag-over");
+        });
+      });
+
+      dropzone.addEventListener("drop", function (e) {
+        const dt = e.dataTransfer;
+        if (!dt || !dt.files || dt.files.length === 0) return;
+        const file = dt.files[0];
+        const validationError = validateClientFile(file);
+        if (validationError) {
+          showError(validationError);
+          return;
+        }
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("model", modelSelect.value);
+        startAnalysisRequest(fd, file.name);
+      });
+
+      // Option B: 1-Click Sample Log CTA
+      sampleCtaBtn.addEventListener("click", function () {
+        const fd = new FormData();
+        fd.append("use_sample", "true");
+        fd.append("model", modelSelect.value);
+        startAnalysisRequest(fd, "Cultive8_Workspace_Agrigen_Server.log");
+      });
+
+      function renderChunkTable(chunks) {
+        auditCountLabel.textContent = chunks.length + (chunks.length === 1 ? " call" : " calls");
+        if (!chunks || chunks.length === 0) {
+          chunkTableBody.innerHTML =
+            '<tr><td colspan="8" style="text-align:center; color:var(--ink-secondary);">Running Chunk 1 via local Ollama...</td></tr>';
+          return;
+        }
+
+        chunkTableBody.innerHTML = chunks.map(function (c) {
+          const totalTok = Number(c.total_call_tokens || c.total_context_used || 0);
+          const promptTok = Number(c.ollama_prompt_tokens || c.prompt_tokens || 0);
+          const outTok = Number(c.ollama_output_tokens || c.response_tokens || 0);
+          const carryTok = Number(c.carry_state_tokens || 0);
+          const durSec = (Number(c.duration_ms || 0) / 1000).toFixed(2) + "s";
+          const statusBadge = c.within_2048_limit !== false
+            ? '<span class="badge-ok">OK &le; 2,048</span>'
+            : '<span class="sev-badge Critical">OVER CAP</span>';
+
+          return (
+            "<tr>" +
+              "<td><strong>Part " + c.chunk_index + "</strong></td>" +
+              "<td>L" + c.line_start + "&ndash;L" + c.line_end + "</td>" +
+              "<td>" + carryTok + " / 250 tok</td>" +
+              "<td>" + promptTok.toLocaleString() + " tok</td>" +
+              "<td>" + outTok.toLocaleString() + " tok</td>" +
+              "<td><strong>" + totalTok.toLocaleString() + " / 2,048</strong></td>" +
+              "<td>" + durSec + "</td>" +
+              "<td>" + statusBadge + "</td>" +
+            "</tr>"
+          );
+        }).join("");
+      }
+
+      function renderFindings(report, isCompleted) {
+        if (!report) return;
+        reportSection.classList.add("visible");
+
+        const findings = Array.isArray(report.findings) ? report.findings : [];
+        const ignored = Array.isArray(report.ignored_noise) ? report.ignored_noise : [];
+        const crossCount = findings.filter(function (f) {
+          return f.CrossChunkLinked || f.is_cross_chunk;
+        }).length;
+        const maxTok = Number(report.max_total_context_observed || 0);
+
+        reportSummaryText.textContent = report.summary || "";
+        kpiTotalFindings.textContent = String(findings.length);
+        kpiCrossChains.textContent = String(crossCount);
+        kpiMaxTokens.textContent = maxTok.toLocaleString() + " / 2,048";
+        kpiIgnoredNoise.textContent = String(ignored.length);
+
+        if (report.strictly_under_2048_tokens !== false) {
+          reportBadgeState.textContent = isCompleted
+            ? "Completed · Strictly <= 2,048 Tokens / Call"
+            : "Live Stream · Strictly <= 2,048 Tokens / Call";
+        }
+
+        if (findings.length === 0) {
+          findingsStack.innerHTML =
+            '<div class="card"><p style="margin:0; color:var(--ink-secondary);">No security findings detected yet.</p></div>';
+        } else {
+          findingsStack.innerHTML = findings.map(function (f, idx) {
+            const sev = f.severity || "Medium";
+            const cardId = "finding-card-" + (idx + 1);
+            const chunksSpanned = Array.isArray(f.chunks_spanned)
+              ? f.chunks_spanned
+              : (Array.isArray(f.chunks_involved) ? f.chunks_involved : []);
+            const isCross = Boolean(f.CrossChunkLinked || f.is_cross_chunk || chunksSpanned.length > 1);
+            const crossBadgeHtml = isCross
+              ? '<span class="cross-chunk-badge">Linked across Parts ' + chunksSpanned.join(", ") + '</span>'
+              : '<span class="finding-id-pill">Part ' + (chunksSpanned[0] || 1) + '</span>';
+
+            const evLines = Array.isArray(f.evidence_lines) ? f.evidence_lines : [];
+            const pillsHtml = evLines.map(function (ln) {
+              return (
+                '<button type="button" class="line-pill" data-target-card="' + cardId + '" data-line="' + ln + '">' +
+                  'L' + ln +
+                '</button>'
+              );
+            }).join("");
+
+            const excerpts = Array.isArray(f.evidence_excerpts)
+              ? f.evidence_excerpts
+              : (Array.isArray(f.evidence_snippets) ? f.evidence_snippets : []);
+
+            const excerptsHtml = excerpts.map(function (ex) {
+              const ln = ex.line || ex.line_number;
+              const txt = ex.text || ex.compact_text || ("L" + ln);
+              const partTag = ex.chunk_index ? "[Part " + ex.chunk_index + "] " : "";
+              return (
+                '<div class="excerpt-row" id="' + cardId + '-line-' + ln + '" data-line="' + ln + '">' +
+                  '<strong>' + escapeHtml(partTag) + '</strong>' + escapeHtml(txt) +
+                '</div>'
+              );
+            }).join("");
+
+            const crossNarrativeHtml = f.cross_chunk_explanation
+              ? '<div class="cross-chain-note"><strong>Cross-Chunk Correlation:</strong> ' +
+                escapeHtml(f.cross_chunk_explanation) + '</div>'
+              : '';
+
+            return (
+              '<article class="finding-card sev-' + escapeHtml(sev) + '" id="' + cardId + '">' +
+                '<div class="finding-top-row">' +
+                  '<div class="finding-badges">' +
+                    '<span class="sev-badge ' + escapeHtml(sev) + '">' + escapeHtml(sev) + '</span>' +
+                    '<span class="finding-id-pill">' + escapeHtml(f.id || ("F" + (idx + 1))) + '</span>' +
+                    crossBadgeHtml +
+                  '</div>' +
+                  '<span style="font-family:var(--font-mono); font-size:12.5px; font-weight:600; color:var(--ink-secondary);">' +
+                    evLines.length + ' Evidence Lines Verified' +
+                  '</span>' +
+                '</div>' +
+                '<h3 class="finding-title">' + escapeHtml(f.attack_type) + '</h3>' +
+                '<div class="actor-meta"><strong>Actor IP / Identity:</strong> ' + escapeHtml(f.actor_id || f.actor_ip) + '</div>' +
+                crossNarrativeHtml +
+                '<div class="finding-prose-grid">' +
+                  '<div class="prose-box">' +
+                    '<div class="prose-box-label">What Happened (Grounded Explanation)</div>' +
+                    '<p class="prose-box-body">' + escapeHtml(f.reason) + '</p>' +
+                  '</div>' +
+                  '<div class="prose-box">' +
+                    '<div class="prose-box-label">What To Do Now (Suggested Action)</div>' +
+                    '<p class="prose-box-body">' + escapeHtml(f.suggested_action) + '</p>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="evidence-lines-bar">' +
+                  '<span class="evidence-label">Click Line Badge to Inspect Log Evidence:</span>' +
+                  pillsHtml +
+                '</div>' +
+                '<div class="excerpts-container">' +
+                  excerptsHtml +
+                '</div>' +
+              '</article>'
+            );
+          }).join("");
+        }
+
+        // Ignored operational noise drawer
+        noiseCountLabel.textContent = ignored.length + (ignored.length === 1 ? " category" : " categories");
+        if (ignored.length === 0) {
+          noiseList.innerHTML =
+            '<div class="noise-item"><p class="noise-desc">Operational noise summary is compiled upon job completion.</p></div>';
+        } else {
+          noiseList.innerHTML = ignored.map(function (item) {
+            const linesArr = Array.isArray(item.lines) ? item.lines : (item.evidence_lines || []);
+            const lineLabels = linesArr.map(function (l) { return "L" + l; }).join(", ");
+            return (
+              '<div class="noise-item">' +
+                '<div class="noise-item-header">' +
+                  '<span>' + escapeHtml(item.category) + ' <span style="font-weight:400; color:var(--ink-secondary);">(' + escapeHtml(item.actor_or_service || "system") + ')</span></span>' +
+                  '<span class="noise-lines">Lines: ' + escapeHtml(lineLabels) + '</span>' +
+                '</div>' +
+                '<p class="noise-desc">' + escapeHtml(item.explanation) + '</p>' +
+              '</div>'
+            );
+          }).join("");
+        }
+      }
+
+      // Click handler for line pills inside finding cards
+      findingsStack.addEventListener("click", function (e) {
+        const btn = e.target.closest(".line-pill");
+        if (!btn) return;
+        const cardId = btn.getAttribute("data-target-card");
+        const ln = btn.getAttribute("data-line");
+        const card = document.getElementById(cardId);
+        if (!card) return;
+
+        card.querySelectorAll(".line-pill").forEach(function (b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+
+        card.querySelectorAll(".excerpt-row").forEach(function (r) { r.classList.remove("highlighted"); });
+        const targetRow = document.getElementById(cardId + "-line-" + ln);
+        if (targetRow) {
+          targetRow.classList.add("highlighted");
+          targetRow.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      });
+
+      async function pollJobStatus(jobId) {
+        if (!jobId) return;
+        try {
+          const resp = await fetch("/api/jobs/" + encodeURIComponent(jobId));
+          if (!resp.ok) return;
+          const data = await resp.json();
+
+          stripModel.textContent = "Model: " + (data.model || "qwen3.5:0.8b");
+          if (data.backend_rss_mb) {
+            stripRam.textContent = "Backend RAM: " + Number(data.backend_rss_mb).toFixed(1) + " MB / 4,096 MB";
+            metricRss.textContent = "Backend RSS: " + Number(data.backend_rss_mb).toFixed(1) + " MB";
+          }
+
+          const totalChunks = Number(data.total_chunks || 1);
+          const chunks = Array.isArray(data.chunk_progress) ? data.chunk_progress : [];
+          const completedCount = chunks.length;
+          const currentPart = data.status === "completed"
+            ? totalChunks
+            : Math.min(totalChunks, Math.max(Number(data.current_chunk || 1), completedCount));
+
+          const pct = totalChunks > 0 ? Math.min(100, Math.round((completedCount / totalChunks) * 100)) : 0;
+          progressFill.style.width = pct + "%";
+          progressBarAria.setAttribute("aria-valuenow", String(pct));
+
+          metricPart.textContent = "Part " + currentPart + " of " + totalChunks;
+          if (chunks.length > 0) {
+            const lastChunk = chunks[chunks.length - 1];
+            metricLines.textContent = "Lines L" + lastChunk.line_start + "–L" + lastChunk.line_end + " (of " + data.total_lines + ")";
+            const lastTot = Number(lastChunk.total_call_tokens || lastChunk.total_context_used || 0);
+            metricLastTokens.textContent = lastTot.toLocaleString() + " / 2,048 tok";
+          }
+
+          const tb = data.token_budget || {};
+          const maxUsed = Number(tb.max_chunk_tokens_used || 0);
+          metricMaxTokens.textContent = "Max call observed: " + maxUsed.toLocaleString() + " / 2,048";
+
+          const elapsedSec = (Number(data.elapsed_ms || 0) / 1000).toFixed(1) + "s";
+          metricElapsed.textContent = elapsedSec;
+
+          renderChunkTable(chunks);
+
+          if (data.report) {
+            const fList = Array.isArray(data.report.findings) ? data.report.findings : [];
+            const cCnt = fList.filter(function (f) { return f.CrossChunkLinked || f.is_cross_chunk; }).length;
+            metricFindingsSoFar.textContent = fList.length + (fList.length === 1 ? " Threat" : " Threats");
+            metricCrossSoFar.textContent = cCnt + " cross-chunk chains linked";
+            renderFindings(data.report, data.status === "completed");
+          }
+
+          if (data.status === "completed") {
+            if (pollTimer) {
+              clearInterval(pollTimer);
+              pollTimer = null;
+            }
+            telemetryStatusPill.textContent = "Completed · 100%";
+            selectedFileIndicator.innerHTML =
+              "Completed analysis of <code>" + escapeHtml(data.filename) + "</code> (" +
+              totalChunks + " chunks, max " + maxUsed.toLocaleString() + " / 2,048 tokens).";
+            setButtonsBusy(false);
+          } else if (data.status === "failed") {
+            if (pollTimer) {
+              clearInterval(pollTimer);
+              pollTimer = null;
+            }
+            telemetryStatusPill.textContent = "Failed";
+            showError(data.error || "Analysis job failed.");
+            setButtonsBusy(false);
+          } else {
+            telemetryStatusPill.textContent = "Running · " + pct + "%";
+          }
+        } catch (err) {
+          // Keep polling on transient error
+        }
+      }
+
+      loadSystemStatus();
+    })();
+  </script>
+</body>
+</html>

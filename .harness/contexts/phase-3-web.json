@@ -1,0 +1,49 @@
+{
+  "goal": "Phase 3: Implement FastAPI backend (app/main.py) and Drunk-Man-Usable single-page operational UI (app/static/index.html).",
+  "acceptance": [
+    "app/main.py implements GET /, GET /api/system, POST /api/analyze, and GET /api/jobs/{job_id} with streaming file upload and validation",
+    "app/static/index.html implements the Daylight Operational Ledger UI from 04-frontend-ui-contract/SPEC.md with 1-click sample log analysis, drag-and-drop upload, live chunk/token progress, and unified report cards",
+    "Checkpoint phase-3-web as completed and output bold handoff prompt for phase-4-verify"
+  ],
+  "decisions": [
+    "Stream uploads in 64 KB chunks with incremental UTF-8 and null-byte validation directly to runs/<job_id>/input.log",
+    "Enforce single-worker ThreadPoolExecutor so local Ollama inference is strictly sequential and never exceeds 1 call in flight"
+  ],
+  "completed": [
+    "Implemented app/main.py with GET /, GET /api/system, POST /api/analyze, and GET /api/jobs/{job_id}",
+    "Implemented app/static/index.html with Daylight Operational Ledger UI (#F5F4EF), 1-click sample log CTA, drag-and-drop upload, live per-chunk token telemetry, cross-chunk threat cards, and ignored operational noise drawer",
+    "Verified GET /, GET /api/system, POST /api/analyze validation (400 on invalid extension/empty/binary/cloud model) and live 202 job execution + GET /api/jobs/{job_id} state persistence"
+  ],
+  "remaining": [],
+  "blockers": [],
+  "uncertainties": [],
+  "next_step": "Execute phase-4-verify: implement tests/test_analyzer.py, README.md, and sample_output/Cultive8_Sample_Analysis_Report.json, run pytest + live verification.",
+  "evidence": [
+    "/home/ahnaf-zakaria/Desktop/Cultive8/app/main.py",
+    "/home/ahnaf-zakaria/Desktop/Cultive8/app/static/index.html",
+    "/home/ahnaf-zakaria/Desktop/Cultive8/.harness/design/03-backend-api-and-sse/SPEC.md",
+    "/home/ahnaf-zakaria/Desktop/Cultive8/.harness/design/04-frontend-ui-contract/SPEC.md"
+  ],
+  "architecture": [
+    "app/main.py",
+    "app/static/index.html"
+  ],
+  "verification_status": "passed",
+  "task": "phase-3-web",
+  "project_id": "55534326-de29-4630-acc4-afd0b6ecafb0",
+  "packet_revision": 2,
+  "saved_at": 1794057778.7488596,
+  "identity": {
+    "snapshot": "49287f9111c0299b94f073c811029528566c364322b1089c78d3c2f5fbfc3ff0",
+    "revision": null,
+    "branch": null,
+    "git": false
+  },
+  "evidence_hashes": {
+    "/home/ahnaf-zakaria/Desktop/Cultive8/app/main.py": "2631479af515cec2e9bdb02e5fcaa04b1b44baf9dfd29e2e408f8f64111acb2e",
+    "/home/ahnaf-zakaria/Desktop/Cultive8/app/static/index.html": "c08df681ef8cccea93125ee5e1fb906fe3446535cdc09b0aaee0af66f6a3132c",
+    "/home/ahnaf-zakaria/Desktop/Cultive8/.harness/design/03-backend-api-and-sse/SPEC.md": "42369d8a9731d189d6dc2d928cf58157b73dfdd00384e077708171581f719aad",
+    "/home/ahnaf-zakaria/Desktop/Cultive8/.harness/design/04-frontend-ui-contract/SPEC.md": "4794cae5726af3db7a487332525542eefaacad376fa860369b29fc0e8debbb27"
+  },
+  "worktree": "/home/ahnaf-zakaria/Desktop/Cultive8"
+}
