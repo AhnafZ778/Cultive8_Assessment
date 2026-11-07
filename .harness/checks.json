@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "checks": [
+    {
+      "name": "verification_gates_suite",
+      "argv": [".venv/bin/pytest", "-q", "tests/test_analyzer.py"],
+      "timeout": 60
+    }
+  ]
+}
