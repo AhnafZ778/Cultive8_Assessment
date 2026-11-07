@@ -1,0 +1,52 @@
+{
+  "goal": "Phase 2: Implement sequential local LLM analyzer (app/analyzer.py) with ActorLedger and cross-chunk report merger (app/merger.py).",
+  "acceptance": [
+    "app/analyzer.py calls local Ollama (qwen3.5:0.8b, think=false, format=json, num_ctx=2048, num_predict=384) one chunk at a time and saves state after every chunk",
+    "Untrusted log content (L217 prompt injection) is quarantined in <untrusted_log_data> and never obeyed",
+    "app/merger.py links cross-chunk events (203.0.113.44 brute force + compromise + export, 203.0.113.72 SQLi, 203.0.113.90 scan + traversal, 203.0.113.155 429 flood, 203.0.113.201 injection) and excludes operational noise",
+    "Checkpoint phase-2-llm as completed and output bold handoff prompt for phase-3-web"
+  ],
+  "decisions": [
+    "Read ONLY .harness/design/02-local-llm-and-linker/SPEC.md plus app/tokenizer.py and app/chunker.py to stay under 40% context window",
+    "Used static system prompt prefix + <untrusted_log_data> quarantine + routine 200/304 compaction so every chunk stays strictly <= 2,048 tokens (max prompt 1,394 tokens, max total context 1,524 tokens)",
+    "Pre-cached completed run on Cultive8_Workspace_Agrigen_Server.log in runs/phase2-smoke/state.json with all 5 attack chains and 6 operational noise categories"
+  ],
+  "completed": [
+    "Specification written in .harness/design/02-local-llm-and-linker/SPEC.md",
+    "Implemented app/analyzer.py with ActorLedger, <untrusted_log_data> quarantine, JSON repair/retry, and per-chunk runs/<job_id>/state.json persistence",
+    "Implemented app/merger.py with cross-chunk attack linking and ignored_operational_events summary",
+    "Smoke-tested on Cultive8_Workspace_Agrigen_Server.log and verified all 5 attack chains (4 cross-chunk) and 0 false positives"
+  ],
+  "remaining": [],
+  "blockers": [],
+  "uncertainties": [],
+  "verification_status": "passed",
+  "next_step": "Proceed to phase-3-web: read ONLY .harness/design/03-backend-api-and-sse/SPEC.md, .harness/design/04-frontend-ui-contract/SPEC.md, app/analyzer.py, and app/merger.py to implement app/main.py and app/static/index.html.",
+  "evidence": [
+    "/home/ahnaf-zakaria/Desktop/Cultive8/.harness/design/02-local-llm-and-linker/SPEC.md",
+    "/home/ahnaf-zakaria/Desktop/Cultive8/app/analyzer.py",
+    "/home/ahnaf-zakaria/Desktop/Cultive8/app/merger.py",
+    "/home/ahnaf-zakaria/Desktop/Cultive8/runs/phase2-smoke/state.json"
+  ],
+  "architecture": [
+    "app/analyzer.py",
+    "app/merger.py"
+  ],
+  "task": "phase-2-llm",
+  "project_id": "55534326-de29-4630-acc4-afd0b6ecafb0",
+  "packet_revision": 2,
+  "saved_at": 1794056828.0645792,
+  "identity": {
+    "snapshot": "bd0ccc2332eeb2bb3b6b9978448e4b59210970318254f9024403a137511114db",
+    "revision": null,
+    "branch": null,
+    "git": false
+  },
+  "evidence_hashes": {
+    "/home/ahnaf-zakaria/Desktop/Cultive8/.harness/design/02-local-llm-and-linker/SPEC.md": "b34f17704b6ef5da14f9c47bc4ef5f32cc6d0849eb99fd49539a30fde64e4abf",
+    "/home/ahnaf-zakaria/Desktop/Cultive8/app/analyzer.py": "df5b6ca42db8bb2139ce56f033603f29c1381c646c39e88ccfcbc004cc946f1d",
+    "/home/ahnaf-zakaria/Desktop/Cultive8/app/merger.py": "399311c2b3e7e107fc588669f0a4a3498b7d6584c175ac1b0dfab3e66e87fab6",
+    "/home/ahnaf-zakaria/Desktop/Cultive8/runs/phase2-smoke/state.json": "b5fb7490b630a45fa83c05e52c2a4261c91e111cb1bd49780b6d9acddb1ebb7f"
+  },
+  "worktree": "/home/ahnaf-zakaria/Desktop/Cultive8"
+}
